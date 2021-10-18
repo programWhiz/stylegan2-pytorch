@@ -390,14 +390,14 @@ if __name__ == "__main__":
         '--ckpt-iter',
         dest="checkpoint_iters",
         type=int,
-        default=10,
+        default=250,
         help="Checkpoint iterations."
     )
     parser.add_argument(
         '--sample-iter',
         dest="sample_iters",
         type=int,
-        default=10,
+        default=250,
         help='Iterations per image sample.'
     )
     parser.add_argument("--lr", type=float, default=0.002, help="learning rate")

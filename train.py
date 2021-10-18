@@ -301,7 +301,7 @@ def train(args, loader, generator, discriminator, g_optim, d_optim, g_ema, devic
                     }
                 )
 
-            if i % 100 == 0:
+            if i % args.sample_iters == 0:
                 with torch.no_grad():
                     g_ema.eval()
                     sample, _ = g_ema([sample_z])
@@ -313,7 +313,7 @@ def train(args, loader, generator, discriminator, g_optim, d_optim, g_ema, devic
                         range=(-1, 1),
                     )
 
-            if i % 10000 == 0:
+            if i % args.checkpoint_iters == 0:
                 torch.save(
                     {
                         "g": g_module.state_dict(),
@@ -385,6 +385,18 @@ if __name__ == "__main__":
         type=str,
         default=None,
         help="path to the checkpoints to resume training",
+    )
+    parser.add_argument(
+        '--ckpt-iter',
+        dest="checkpoint_iters",
+        default=10,
+        help="Checkpoint iterations."
+    )
+    parser.add_argument(
+        '--sample-iter',
+        dest="sample_iters",
+        default=10,
+        help='Iterations per image sample.'
     )
     parser.add_argument("--lr", type=float, default=0.002, help="learning rate")
     parser.add_argument(

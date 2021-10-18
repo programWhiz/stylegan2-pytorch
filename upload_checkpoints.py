@@ -29,7 +29,7 @@ class Monitor:
 
         _, ext = splitext(last)
         date_str = datetime.fromtimestamp(getmtime(last)).strftime("%Y_%m_%d_%H_%M_%S_%f")
-        key = f'{self.key_prefix}_{date_str}.{ext}'
+        key = f'{self.key_prefix}_{date_str}{ext}'
 
         blob = self.bucket.blob(key)
         if not blob.exists():
@@ -45,7 +45,7 @@ def main():
 
     date_str = datetime.utcnow().strftime('%Y_%m_%d_%H_%M_%S_%f')
 
-    bucket = storage.Cilent().get_bucket('tokimeki-waifu')
+    bucket = storage.Client().get_bucket('tokimeki-waifu')
     monitors = [
         Monitor(bucket, ckpt_dir, f'sg2/ckpt/{date_str}/'),
         Monitor(bucket, samples_dir, f'sg2/samples/{date_str}/')

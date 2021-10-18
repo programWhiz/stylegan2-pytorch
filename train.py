@@ -523,9 +523,6 @@ if __name__ == "__main__":
     transform = transforms.Compose(
         [
             transforms.RandomHorizontalFlip(),
-            transforms.RandomRotation(degrees=5, interpolation=InterpolationMode.LANCZOS),
-            transforms.RandomResizedCrop(scale=(0.9, 1.0), ratio=(9/10, 10/9), interpolation=InterpolationMode.LANCZOS),
-            transforms.ColorJitter(brightness=0.05, contrast=0.05, saturation=0.05, hue=0.1),
             transforms.ToTensor(),
             transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5), inplace=True),
         ]

@@ -2,14 +2,13 @@ import argparse
 import math
 import random
 import os
-
-import numpy as np
 import torch
 from torch import nn, autograd, optim
 from torch.nn import functional as F
 from torch.utils import data
 import torch.distributed as dist
 from torchvision import transforms, utils
+from torchvision.transforms import InterpolationMode
 from tqdm import tqdm
 
 try:
@@ -512,6 +511,9 @@ if __name__ == "__main__":
     transform = transforms.Compose(
         [
             transforms.RandomHorizontalFlip(),
+            transforms.RandomRotation(degrees=5, interpolation=InterpolationMode.LANCZOS),
+            transforms.RandomResizedCrop(scale=(0.9, 1.0), ratio=(9/10, 10/9), interpolation=InterpolationMode.LANCZOS),
+            transforms.ColorJitter(brightness=0.05, contrast=0.05, saturation=0.05, hue=0.1),
             transforms.ToTensor(),
             transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5), inplace=True),
         ]

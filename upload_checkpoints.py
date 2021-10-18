@@ -45,8 +45,8 @@ def main():
 
     bucket = storage.Client().get_bucket('tokimeki-waifu')
     monitors = [
-        Monitor(bucket, ckpt_dir, f'sg2/ckpt/{date_str}/ckpt_'),
-        Monitor(bucket, samples_dir, f'sg2/samples/{date_str}/samples_')
+        Monitor(bucket, ckpt_dir, f'sg2/ckpt/{date_str}/ckpt'),
+        Monitor(bucket, samples_dir, f'sg2/samples/{date_str}/samples')
     ]
 
     while True:

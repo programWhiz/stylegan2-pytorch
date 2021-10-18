@@ -23,8 +23,6 @@ class Monitor:
 
         if last == self.prev_last:
             return
-
-        self.upload_file(last)
         self.prev_last = last
 
         _, ext = splitext(last)

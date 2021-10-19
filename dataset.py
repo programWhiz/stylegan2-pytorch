@@ -26,8 +26,16 @@ class MultiDirDataset(Dataset):
             self.len_ = sum(len(item.dataset) for item in self.items)
         return self.len_
 
+    class Item:
+        def __init__(self, path, count, prob, dataset, cut):
+            self.path = path
+            self.count = count
+            self.prob = prob
+            self.cut = cut
+            self.dataset = dataset
+
     def parse_paths_pattern(self, pattern, build_dataset):
-        Item = namedtuple('Item', ['path', 'count', 'prob', 'dataset', 'cut'])
+        Item = MultiDirDataset.Item
         parts = pattern.split(',')
         items = []
 

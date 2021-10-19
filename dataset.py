@@ -32,7 +32,8 @@ class MultiDirDataset(Dataset):
         if self.len_ is None:
             cts_lens = [ (item.count, len(item.dataset)) for item in self.items ]
             ratios = [ int(math.ceil(ln / ct)) for ln, ct in cts_lens ]
-            self.len_ = max(ratios) * self.pattern_size
+            max_len = max(ln for ct, ln in cts_lens)
+            self.len_ = max(ratios) * self.pattern_size * max_len
         return self.len_
 
     def parse_paths_pattern(self, pattern, build_dataset):

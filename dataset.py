@@ -1,7 +1,7 @@
-import math
 from collections import namedtuple
 from io import BytesIO
 import re
+import random
 import lmdb
 from PIL import Image
 from torch.utils.data import Dataset
@@ -22,25 +22,15 @@ class MultiDirDataset(Dataset):
         print(f"Total Len: {len(self)}\n")
 
     def __len__(self):
-        # Suppose we have items with (count, len):
-        # [ (4, 5), (2, 7), (3, 8) ]
-        # this gives a "count to length" ratio for items:
-        # [ 5/4, 7/2, 8/3 ]
-        # Rounding up for each: [ 2, 4, 3 ]
-        # Getting max, we need 4 iterations of the pattern to get through the entire
-        # 2nd dataset: 4 * len(pattern) == 4 * (4 + 2 + 3) == 4 * 9 == 36
         if self.len_ is None:
-            cts_lens = [ (item.count, len(item.dataset)) for item in self.items ]
-            ratios = [ int(math.ceil(ln / ct)) for ln, ct in cts_lens ]
-            max_len = max(ln for ct, ln in cts_lens)
-            self.len_ = max(ratios) * self.pattern_size * max_len
+            self.len_ = sum(len(item.dataset) for item in self.items)
         return self.len_
 
     def parse_paths_pattern(self, pattern, build_dataset):
-        Item = namedtuple('Item', ['path', 'count', 'cut', 'dataset'])
+        Item = namedtuple('Item', ['path', 'count', 'prob', 'dataset', 'cut'])
         parts = pattern.split(',')
-        pairs = []
-        cut = 0
+        items = []
+
         for part in parts:
             match = re.match(r'(.*):(\d+)$', part)
             path = match.group(1)
@@ -48,33 +38,25 @@ class MultiDirDataset(Dataset):
             if count < 1:
                 raise Exception(f'Count must be positive: {count}')
 
-            cut += count
             dataset = build_dataset(path)
-            pairs.append(Item(path=path, count=count, cut=cut, dataset=dataset))
+            items.append(Item(path=path, count=count, prob=0, cut=0.0, dataset=dataset))
 
-        return pairs
+        total = sum(x.count for x in items)
+        cut = 0.0
+        for item in items:
+            item.prob = item.count / total
+            cut += item.prob
+            item.cut = cut
+
+        # make sure the cut thresholds sum to 1.0
+        items[-1].cut = 1.0
+
+        return items
 
     def __getitem__(self, idx):
-        return self.get_sub_sample_index(idx)
-
-    def get_sub_sample_index(self, x : int):
-        # figure out which element of the pattern we are in
-        pat_idx = x % self.pattern_size
-        # Get part of the pattern that contains the subsegment
-        item_idx, item = next((i, item) for i, item in enumerate(self.items) if pat_idx < item.cut)
-        # Which index is it inside the pattern?
-        # Example: a=3, b=2, c=1  total=6
-        # if x=36, then 39%6 = 3, so we are in part b
-        # We know that we have 38 // 5 = 7 cycles through the pattern,
-        # And we have remainder: (3 - b.cut) % b.size = (3 - 3 == 0) % b.size = 0
-        # so we are |b| * cycles deep into b: sample_idx = 2 * 7 + 0 = 14
-        pattern_cycles = x // self.pattern_size
-        base_idx = pattern_cycles * item.count
-        # How deep into this one sub-pattern are we?
-        prev_cut = self.items[item_idx - 1].cut if item_idx > 0 else 0
-        pat_sub_idx = (pat_idx - prev_cut) % item.count
-        item_sample_idx = (base_idx + pat_sub_idx) % len(item)
-        return item.dataset[item_sample_idx]
+        p = random.random()
+        item = next((item for item in self.items if p <= item.cut), self.items[-1])
+        return item.dataset[idx % len(item.dataset)]
 
 
 class MultiResolutionDataset(Dataset):

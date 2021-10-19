@@ -18,7 +18,7 @@ except ImportError:
     wandb = None
 
 
-from dataset import MultiResolutionDataset
+from dataset import MultiResolutionDataset, MultiDirDataset
 from distributed import (
     get_rank,
     synchronize,
@@ -530,7 +530,12 @@ if __name__ == "__main__":
         ]
     )
 
-    dataset = MultiResolutionDataset(args.path, transform, args.size)
+    if ',' in args.path:
+        def make_ds(path_):
+            MultiResolutionDataset(path_, transform, args.size)
+        dataset = MultiDirDataset(args.path, make_ds)
+    else:
+        dataset = MultiResolutionDataset(args.path, transform, args.size)
     loader = data.DataLoader(
         dataset,
         batch_size=args.batch,

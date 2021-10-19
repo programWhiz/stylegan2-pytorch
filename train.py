@@ -532,7 +532,7 @@ if __name__ == "__main__":
 
     if ',' in args.path:
         def make_ds(path_):
-            MultiResolutionDataset(path_, transform, args.size)
+            return MultiResolutionDataset(path_, transform, args.size)
         dataset = MultiDirDataset(args.path, make_ds)
     else:
         dataset = MultiResolutionDataset(args.path, transform, args.size)

@@ -34,9 +34,11 @@ class Monitor:
             print(f"Uploading file {last} to: {self.bucket.path}/{key}")
             blob.upload_from_filename(last)
 
-        for old_file in files[0:-4]:
-            print("Removing old file:", old_file)
-            os.remove(old_file)
+        if len(files) > 4:
+            sorted_files = sorted(files, key=lambda f: getmtime(f))
+            for old_file in sorted_files[0:-4]:
+                print("Removing old file:", old_file)
+                os.remove(old_file)
 
 
 @click.command()

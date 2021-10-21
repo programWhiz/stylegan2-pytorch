@@ -8,17 +8,18 @@ from google.cloud import storage
 
 
 class Monitor:
-    def __init__(self, bucket, path, key_prefix):
+    def __init__(self, bucket, path, key_prefix, ext):
         self.key_prefix = key_prefix
         self.bucket = bucket
         self.path = path
         self.prev_last = None
+        self.ext = ext
 
     def update(self):
         if not os.path.exists(self.path):
             return
 
-        files = [ join(self.path, f) for f in os.listdir(self.path) ]
+        files = [ join(self.path, f) for f in os.listdir(self.path) if f.endswith(self.ext) ]
         last = max(files, key=lambda f: getmtime(f))
 
         if last == self.prev_last:
@@ -51,8 +52,8 @@ def main():
 
     bucket = storage.Client().get_bucket('tokimeki-waifu')
     monitors = [
-        Monitor(bucket, ckpt_dir, f'sg2/ckpt/{date_str}/ckpt'),
-        Monitor(bucket, samples_dir, f'sg2/samples/{date_str}/samples')
+        Monitor(bucket, ckpt_dir, f'sg2/ckpt/{date_str}/ckpt', '.pt'),
+        Monitor(bucket, samples_dir, f'sg2/samples/{date_str}/samples', '.png')
     ]
 
     while True:

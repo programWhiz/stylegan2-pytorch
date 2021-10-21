@@ -20,6 +20,8 @@ class Monitor:
             return
 
         files = [ join(self.path, f) for f in os.listdir(self.path) if f.endswith(self.ext) ]
+        if not files:
+            return
         last = max(files, key=lambda f: getmtime(f))
 
         if last == self.prev_last:

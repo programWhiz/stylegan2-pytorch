@@ -165,7 +165,7 @@ def main():
             zt1, zb1 = vqvae.encode(fake_img)[0:2]
             zt2, zb2 = vqvae.encode(images1)[0:2]
             zt3, zb3 = vqvae.encode(images2)[0:2]
-            enc_loss = -args.encoder_regularize * (
+            enc_loss = -args.encoder_regularize * args.g_reg_every * (
                     smooth_l1_loss(zt1, zt2) + smooth_l1_loss(zb1, zb2) +
                     smooth_l1_loss(zt1, zt3) + smooth_l1_loss(zb1, zb3))
             generator.zero_grad()

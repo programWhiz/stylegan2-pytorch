@@ -6,7 +6,7 @@ import os
 import torch
 from torch import nn, autograd, optim
 from torch.nn import functional as F
-from torch.nn.functional import smooth_l1_loss
+from torch.nn.functional import smooth_l1_loss, cosine_embedding_loss
 from torch.utils import data
 import torch.distributed as dist
 from torchvision import transforms, utils
@@ -27,9 +27,14 @@ def main():
     data_gen = sample_data(loader)
     generator = UNet().to(device)
 
-    vqvae = VQVAE().to(device)
-    vqvae.load_state_dict(torch.load(args.vqvae))
-    requires_grad(vqvae, False)
+    # vqvae = VQVAE().to(device)
+    # vqvae.load_state_dict(torch.load(args.vqvae))
+    # requires_grad(vqvae, False)
+
+    inception = torch.hub.load('pytorch/vision:v0.10.0', 'inception_v3', pretrained=True).to(device)
+    inception.fc = nn.Identity()
+    inception.eval()
+    requires_grad(inception, False)
 
     discriminator = Discriminator(
         args.size, channel_multiplier=args.channel_multiplier
@@ -162,12 +167,19 @@ def main():
 
             g_input = torch.cat((images1, images2), dim=1)
             fake_img = generator(g_input)
-            zt1, zb1 = vqvae.encode(fake_img)[0:2]
-            zt2, zb2 = vqvae.encode(images1)[0:2]
-            zt3, zb3 = vqvae.encode(images2)[0:2]
-            enc_loss = -args.encoder_regularize * args.g_reg_every * (
-                    smooth_l1_loss(zt1, zt2) + smooth_l1_loss(zb1, zb2) +
-                    smooth_l1_loss(zt1, zt3) + smooth_l1_loss(zb1, zb3))
+            v1 = inception(prepare_inception_tensor(fake_img))
+            v2 = inception(prepare_inception_tensor(images1))
+            v3 = inception(prepare_inception_tensor(images2))
+
+            # Reshape so we can perform dot products
+            N, S = v1.shape
+            v1 = v1.view(N, 1, S)
+            v2 = v2.view(N, S, 1)
+            v3 = v3.view(N, S, 1)
+
+            enc_loss = args.encoder_regularize * args.g_reg_every * (
+                        torch.bmm(v1, v2) + torch.bmm(v1, v3)).mean() / S
+
             generator.zero_grad()
             enc_loss.backward()
             g_optim.step()
@@ -189,6 +201,13 @@ def main():
             )
 
     print('Done!')
+
+
+def prepare_inception_tensor(x):
+    chans = x.shape[1]
+    x = x.mean(1, True)
+    x = x.repeat(1, chans, 1, 1)
+    return torch.nn.functional.upsample(x, size=(299, 299))
 
 
 class UNet(nn.Module):
@@ -234,14 +253,12 @@ class ResBlockDown(nn.Module):
         super().__init__()
         self.resblock = ResBlock(in_channel, out_channel)
         self.downsample = nn.AvgPool2d((2, 2), stride=2)
-        self.dropout = nn.Dropout(p=0.5)
         self.bn = nn.BatchNorm2d(out_channel)
 
     def forward(self, x):
         x = self.resblock(x)
         x = self.bn(x)
         x = self.downsample(x)
-        x = self.dropout(x)
         return x
 
 

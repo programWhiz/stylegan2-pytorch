@@ -137,7 +137,7 @@ def main():
         g_input = torch.cat((images1, images2), dim=1)
         fake_img = generator(g_input)
 
-        if i % args.sample_iters == 0:
+        if get_rank() == 0 and i % args.sample_iters == 0:
             utils.save_image(
                 torch.cat((images1, images2, fake_img), dim=0),
                 f"sample/{str(i).zfill(6)}.png",
@@ -175,7 +175,7 @@ def main():
         if get_rank() == 0:
             pbar.set_description(f"d: {d_loss:.4f}; g: {g_loss:.4f}; enc: {enc_loss:.4f}; r1: {r1_loss:.4f}")
 
-        if i % args.checkpoint_iters == 0:
+        if get_rank() == 0 and i % args.checkpoint_iters == 0:
             torch.save(
                 {
                     "g": g_module.state_dict(),
@@ -186,6 +186,8 @@ def main():
                 },
                 f"checkpoint/{str(i).zfill(6)}.pt",
             )
+
+    print('Done!')
 
 
 class UNet(nn.Module):

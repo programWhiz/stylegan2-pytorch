@@ -83,7 +83,8 @@ def main():
         d_module = discriminator
 
     pbar = range(args.iter)
-    if get_rank() == 0:
+    rank = get_rank()
+    if rank == 0:
         pbar = tqdm(pbar, initial=args.start_iter, dynamic_ncols=True, smoothing=0.01)
 
     r1_loss, enc_loss = 0.0, 0.0
@@ -137,7 +138,7 @@ def main():
         g_input = torch.cat((images1, images2), dim=1)
         fake_img = generator(g_input)
 
-        if get_rank() == 0 and i % args.sample_iters == 0:
+        if rank == 0 and i % args.sample_iters == 0:
             utils.save_image(
                 torch.cat((images1, images2, fake_img), dim=0),
                 f"sample/{str(i).zfill(6)}.png",
@@ -172,10 +173,10 @@ def main():
             g_optim.step()
             enc_loss = float(enc_loss.item())
 
-        if get_rank() == 0:
+        if rank == 0:
             pbar.set_description(f"d: {d_loss:.4f}; g: {g_loss:.4f}; enc: {enc_loss:.4f}; r1: {r1_loss:.4f}")
 
-        if get_rank() == 0 and i % args.checkpoint_iters == 0:
+        if rank == 0 and i % args.checkpoint_iters == 0:
             torch.save(
                 {
                     "g": g_module.state_dict(),

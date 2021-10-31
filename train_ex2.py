@@ -156,7 +156,7 @@ def main():
         g_loss = float(g_loss.item())
 
         # Next Step: Encoder loss on generated images
-        if i % args.g_reg_every:
+        if i % args.g_reg_every == 0:
             images1 = next(data_gen).to(device)
             images2 = next(data_gen).to(device)
 

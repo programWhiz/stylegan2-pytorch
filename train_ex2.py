@@ -142,7 +142,7 @@ def main():
             utils.save_image(
                 torch.cat((images1, images2, fake_img), dim=0),
                 f"sample/{str(i).zfill(6)}.png",
-                nrow=3,
+                nrow=args.batch,
                 normalize=True,
                 range=(-1, 1),
             )

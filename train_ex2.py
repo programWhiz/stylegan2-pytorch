@@ -10,6 +10,7 @@ from torch.nn.functional import smooth_l1_loss, cosine_embedding_loss
 from torch.utils import data
 import torch.distributed as dist
 from torchvision import transforms, utils
+from torchvision.transforms.functional import normalize as normalize_im
 from torchvision.transforms import InterpolationMode
 from tqdm import tqdm
 from model import Generator, Discriminator, ConvLayer, Upsample, Downsample
@@ -207,6 +208,7 @@ def prepare_inception_tensor(x):
     chans = x.shape[1]
     x = x.mean(1, True)
     x = x.repeat(1, chans, 1, 1)
+    x = normalize_im(x, mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
     return torch.nn.functional.upsample(x, size=(299, 299))
 
 

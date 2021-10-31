@@ -255,11 +255,13 @@ class ResBlockDown(nn.Module):
         super().__init__()
         self.resblock = ResBlock(in_channel, out_channel)
         self.downsample = nn.AvgPool2d((2, 2), stride=2)
-        self.bn = nn.BatchNorm2d(out_channel)
+        self.lin1 = ConvLayer(out_channel, out_channel, 1)
+        self.bn = nn.BatchNorm2d(in_channel)
 
     def forward(self, x):
-        x = self.resblock(x)
         x = self.bn(x)
+        x = self.resblock(x)
+        x = self.lin1(x)
         x = self.downsample(x)
         return x
 

@@ -234,10 +234,14 @@ class ResBlockDown(nn.Module):
         super().__init__()
         self.resblock = ResBlock(in_channel, out_channel)
         self.downsample = nn.AvgPool2d((2, 2), stride=2)
+        self.dropout = nn.Dropout(p=0.5)
+        self.bn = nn.BatchNorm2d(out_channel)
 
     def forward(self, x):
         x = self.resblock(x)
+        x = self.bn(x)
         x = self.downsample(x)
+        x = self.dropout(x)
         return x
 
 

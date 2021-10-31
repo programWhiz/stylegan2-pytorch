@@ -17,7 +17,6 @@ try:
 except ImportError:
     wandb = None
 
-
 from dataset import MultiResolutionDataset, MultiDirDataset
 from distributed import (
     get_rank,
@@ -258,7 +257,7 @@ def train(args, loader, generator, discriminator, g_optim, d_optim, g_ema, devic
             g_optim.step()
 
             mean_path_length_avg = (
-                reduce_sum(mean_path_length).item() / get_world_size()
+                    reduce_sum(mean_path_length).item() / get_world_size()
             )
 
         loss_dict["path"] = path_loss
@@ -328,9 +327,7 @@ def train(args, loader, generator, discriminator, g_optim, d_optim, g_ema, devic
                 )
 
 
-if __name__ == "__main__":
-    device = "cuda"
-
+def parse_args():
     parser = argparse.ArgumentParser(description="StyleGAN2 trainer")
 
     parser.add_argument("path", type=str, help="path to the lmdb dataset")
@@ -358,6 +355,18 @@ if __name__ == "__main__":
         type=float,
         default=2,
         help="weight of the path length regularization",
+    )
+    parser.add_argument(
+        "--vqvae",
+        type=str,
+        required=True,
+        help="path to vqvae weights.",
+    )
+    parser.add_argument(
+        "--encoder_regularize",
+        type=float,
+        default=2,
+        help="weight of the encoder regularization",
     )
     parser.add_argument(
         "--path_batch_shrink",
@@ -464,6 +473,37 @@ if __name__ == "__main__":
     args.n_mlp = 8
 
     args.start_iter = 0
+    return args
+
+
+def get_data_loader(args):
+    transform = transforms.Compose(
+        [
+            transforms.RandomHorizontalFlip(),
+            transforms.ToTensor(),
+            transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5), inplace=True),
+        ]
+    )
+
+    if ',' in args.path:
+        def make_ds(path_):
+            return MultiResolutionDataset(path_, transform, args.size)
+
+        dataset = MultiDirDataset(args.path, make_ds)
+    else:
+        dataset = MultiResolutionDataset(args.path, transform, args.size)
+
+    return data.DataLoader(
+        dataset,
+        batch_size=args.batch,
+        sampler=data_sampler(dataset, shuffle=True, distributed=args.distributed),
+        drop_last=True,
+    )
+
+
+if __name__ == "__main__":
+    device = "cuda"
+    args = parse_args()
 
     if args.arch == 'stylegan2':
         from model import Generator, Discriminator
@@ -531,26 +571,7 @@ if __name__ == "__main__":
             broadcast_buffers=False,
         )
 
-    transform = transforms.Compose(
-        [
-            transforms.RandomHorizontalFlip(),
-            transforms.ToTensor(),
-            transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5), inplace=True),
-        ]
-    )
-
-    if ',' in args.path:
-        def make_ds(path_):
-            return MultiResolutionDataset(path_, transform, args.size)
-        dataset = MultiDirDataset(args.path, make_ds)
-    else:
-        dataset = MultiResolutionDataset(args.path, transform, args.size)
-    loader = data.DataLoader(
-        dataset,
-        batch_size=args.batch,
-        sampler=data_sampler(dataset, shuffle=True, distributed=args.distributed),
-        drop_last=True,
-    )
+    loader = get_data_loader(args)
 
     if get_rank() == 0 and wandb is not None and args.wandb:
         wandb.init(project="stylegan 2")

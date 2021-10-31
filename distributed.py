@@ -124,3 +124,14 @@ def reduce_loss_dict(loss_dict):
         reduced_losses = {k: v for k, v in zip(keys, losses)}
 
     return reduced_losses
+
+
+def all_reduce(tensor, op=dist.ReduceOp.SUM):
+    world_size = get_world_size()
+
+    if world_size == 1:
+        return tensor
+
+    dist.all_reduce(tensor, op=op)
+
+    return tensor

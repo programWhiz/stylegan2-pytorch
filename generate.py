@@ -8,26 +8,34 @@ from torchvision import utils
 from tqdm import tqdm
 
 
-def generate(args, g_ema, device, mean_latent):
+def generate(args, g_ema, D, device, mean_latent):
     im_count = 0
+    pbar = tqdm(total=args.pics)
     with torch.no_grad():
         g_ema.eval()
-        for i in tqdm(range(args.pics)):
+        while im_count < args.pics:
             sample_z = torch.randn(args.sample, args.latent, device=device)
 
             sample, _ = g_ema(
                 [sample_z], truncation=args.truncation, truncation_latent=mean_latent
             )
+            if args.keep_thresh > 0:
+                scores = D(sample)[:, 0]
+                sample = sample[scores >= args.keep_thresh]
             norm_range(sample, (-1, 1))
 
             ndarr = sample.mul(255).add_(0.5).clamp_(0, 255).permute(0, 2, 3, 1).to('cpu', torch.uint8).numpy()
             for imarr in ndarr:
                 im = Image.fromarray(imarr)
                 im_count += 1
+                pbar.update(1)
                 imdir = join(args.outdir, f"{(im_count//1000):03d}")
                 os.makedirs(imdir, exist_ok=True)
                 impath = join(imdir, f"im{(im_count % 1000):03d}.png")
                 im.save(impath)
+
+                if im_count >= args.pics:
+                    break
 
 
 def norm_ip(img, low, high):
@@ -85,6 +93,11 @@ if __name__ == "__main__":
         default=2,
         help="channel multiplier of the generator. config-f = 2, else = 1",
     )
+    parser.add_argument(
+        "--keep_thresh",
+        type=float,
+        default=0.9,
+        help="Discriminator threshold to keep image.")
 
     parser.add_argument(
         "--arch",
@@ -102,15 +115,16 @@ if __name__ == "__main__":
     args.n_mlp = 8
 
     if args.arch == 'swagan':
-        from swagan import Generator
+        from swagan import Generator, Discriminator
     else:
-        from model import Generator
+        from model import Generator, Discriminator
 
     g_ema = Generator(
         args.size, args.latent, args.n_mlp, channel_multiplier=args.channel_multiplier
     ).to(device)
+    D = Discriminator(args.size, args.channel_multiplier).to(device)
     checkpoint = torch.load(args.ckpt)
-
+    D.load_state_dict(checkpoint['d'])
     g_ema.load_state_dict(checkpoint["g_ema"])
 
     if args.truncation < 1:
@@ -119,4 +133,4 @@ if __name__ == "__main__":
     else:
         mean_latent = None
 
-    generate(args, g_ema, device, mean_latent)
+    generate(args, g_ema, D, device, mean_latent)

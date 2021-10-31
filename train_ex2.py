@@ -75,7 +75,6 @@ def main():
         )
         generator = make_para(generator)
         discriminator = make_para(discriminator)
-        vqvae = make_para(vqvae)
 
         g_module = generator.module
         d_module = discriminator.module
